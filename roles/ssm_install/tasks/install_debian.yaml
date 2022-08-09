@@ -1,0 +1,5 @@
+---
+- name: Download and install amazon-ssm-agent deb package
+  apt:
+    deb: "{{ package_url }}"
+    state: "present"

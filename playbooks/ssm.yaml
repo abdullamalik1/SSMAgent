@@ -1,0 +1,9 @@
+---
+- hosts: "{{ target_group | default('all') }}"
+  gather_facts: True
+  remote_user: {{ remote_user | default('ubuntu') }}
+  become: True
+  become_method: sudo
+  become_user: root
+  roles:
+    - role: ssm_install

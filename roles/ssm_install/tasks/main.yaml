@@ -1,0 +1,67 @@
+---
+- name: "Check if amazon-ssm-agent is installed via snap"
+  package:
+    name: "amazon-ssm-agent"
+    state: present
+    use: "snap"
+  check_mode: true
+  register: snap_check_output
+
+- name: Define Snap Variable
+  set_fact:
+    snap_installed_ssm: "{{ snap_check_output.rc == 0 }}"
+
+- name: "Check if amazon-ssm-agent is installed via package manager"
+  package:
+    name: "amazon-ssm-agent"
+    state: present
+  check_mode: true
+  register: package_manager_check_output
+  ignore_errors: yes
+
+- name: Define Package Manager Variable
+  set_fact:
+    # if the package manager fails, then that means that the package is NOT installed
+    package_manager_installed_ssm: "{{ package_manager_check_output.failed != true }}"
+
+- name: "snap debug information"
+  debug:
+    msg: 'SSM Installed Via Snap: {{ snap_installed_ssm }}'
+
+- name: "package manager debug information"
+  debug:
+    msg: 'SSM Installed Via Package Manager: {{ package_manager_installed_ssm }}'
+#
+#- name: Download and install amazon-ssm-agent rpm package
+#  dnf:
+#    # The amazon-ssm-agent RPM is currently unsigned:
+#    # https://github.com/aws/amazon-ssm-agent/issues/235
+#    disable_gpg_check: yes
+#    name: "{{ package_url | default('https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/linux_amd64/amazon-ssm-agent.rpm') }}"
+#    state: "present"
+#  when: ansible_os_family == "RedHat"
+#  tags:
+#    - redhat
+#
+- name: Download and install amazon-ssm-agent deb package
+  apt:
+    deb: "{{ package_url | default('https://s3.amazonaws.com/ec2-downloads-windows/SSMAgent/latest/debian_amd64/amazon-ssm-agent.deb') }}"
+    state: "present"
+  when: ansible_os_family == "Debian" and snap_installed_ssm == False and package_manager_installed_ssm == False
+  tags:
+    - debian
+#
+#- name: Install amazon-ssm-agent
+#  package:
+#    name:
+#      - amazon-ssm-agent
+#    state: "present"
+#  when: ansible_os_family == "Amazon"
+#  tags:
+#    - Amazon
+#
+- name: Enable Amazon SSM Agent service
+  service:
+    name: amazon-ssm-agent
+    enabled: yes
+  when: snap_installed_ssm == False and package_manager_installed_ssm == False
